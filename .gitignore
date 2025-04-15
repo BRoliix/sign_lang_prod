@@ -1,0 +1,36 @@
+# Python specific ignores
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Environment variables
+.env
+.venv/
+data/
+chormadb/
+.signlang_env/
+.signenv/
+signlang_env/
+env/rere
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# macOS specific ignores
+.DS_Store
+
+# Other files to be hidden
+*.log
+*.sqlite3
+*.db
+*.bak
+*.swp
+*.tmp
