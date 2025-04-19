@@ -1,4 +1,5 @@
 # src/preprocessing/landmark_extractor.py
+
 import cv2
 import mediapipe as mp
 import numpy as np
@@ -40,6 +41,9 @@ class LandmarkExtractor:
         if output_path is None:
             video_name = os.path.splitext(os.path.basename(video_path))[0]
             output_path = os.path.join(self.output_dir, f"{video_name}_landmarks.npy")
+        
+        # Create output directory if it doesn't exist
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
         
         # Open the video file
         cap = cv2.VideoCapture(video_path)
@@ -105,7 +109,7 @@ class LandmarkExtractor:
         video_files = []
         
         for ext in video_extensions:
-            video_files.extend(glob.glob(os.path.join(self.input_dir, f'*{ext}')))
+            video_files.extend(glob.glob(os.path.join(self.input_dir, '**', f'*{ext}'), recursive=True))
         
         return video_files
     
@@ -116,24 +120,60 @@ class LandmarkExtractor:
         
         for video_path in tqdm(video_files, desc="Extracting landmarks"):
             try:
-                self.extract_landmarks(video_path)
+                # Create output path that preserves directory structure
+                rel_path = os.path.relpath(video_path, self.input_dir)
+                output_dir = os.path.join(self.output_dir, os.path.dirname(rel_path))
+                os.makedirs(output_dir, exist_ok=True)
+                
+                video_name = os.path.splitext(os.path.basename(video_path))[0]
+                output_path = os.path.join(output_dir, f"{video_name}_landmarks.npy")
+                
+                self.extract_landmarks(video_path, output_path)
             except Exception as e:
                 print(f"Error extracting landmarks from {video_path}: {str(e)}")
     
-    def create_dataset_csv(self, annotations_dir="data/raw"):
+    def create_dataset_csv(self, annotations_dir="data/raw/openasl/tsv"):
         """Create a CSV file mapping landmark files to their annotations"""
         # Find all landmark files
-        landmark_files = glob.glob(os.path.join(self.output_dir, "*_landmarks.npy"))
+        landmark_files = glob.glob(os.path.join(self.output_dir, '**', "*_landmarks.npy"), recursive=True)
         
-        # Try to find annotation files
-        annotation_files = {}
-        for root, _, files in os.walk(annotations_dir):
-            for file in files:
-                if file.endswith(('.txt', '.csv')):
-                    file_path = os.path.join(root, file)
-                    # Use the filename without extension as the key
-                    key = os.path.splitext(file)[0]
-                    annotation_files[key] = file_path
+        # Try to find OpenASL annotations
+        annotations = {}
+        tsv_path = os.path.join(annotations_dir, "openasl-v1.0.tsv")
+        if os.path.exists(tsv_path):
+            # Load OpenASL annotations
+            try:
+                df = pd.read_csv(tsv_path, sep='\t', low_memory=False)
+                
+                # Find the correct column names
+                video_id_col = None
+                start_time_col = None
+                end_time_col = None
+                text_col = None
+                
+                for col in df.columns:
+                    col_lower = col.lower()
+                    if 'video' in col_lower and 'id' in col_lower:
+                        video_id_col = col
+                    elif 'start' in col_lower and 'time' in col_lower:
+                        start_time_col = col
+                    elif 'end' in col_lower and 'time' in col_lower:
+                        end_time_col = col
+                    elif 'text' in col_lower:
+                        text_col = col
+                
+                if all([video_id_col, start_time_col, end_time_col, text_col]):
+                    for _, row in df.iterrows():
+                        video_id = str(row[video_id_col])
+                        start_time = str(row[start_time_col])
+                        end_time = str(row[end_time_col])
+                        text = row[text_col]
+                        
+                        # Create a key that matches the video filename pattern
+                        key = f"{video_id}-{start_time}-{end_time}"
+                        annotations[key] = text
+            except Exception as e:
+                print(f"Error loading OpenASL annotations: {str(e)}")
         
         # Create dataset entries
         dataset = []
@@ -142,14 +182,10 @@ class LandmarkExtractor:
             
             # Try to find a matching annotation
             annotation = ""
-            for key, annotation_path in annotation_files.items():
-                if video_id in key or key in video_id:
-                    try:
-                        with open(annotation_path, 'r') as f:
-                            annotation = f.read().strip()
-                        break
-                    except:
-                        pass
+            for key, text in annotations.items():
+                if video_id.startswith(key):
+                    annotation = text
+                    break
             
             dataset.append({
                 'video_id': video_id,
