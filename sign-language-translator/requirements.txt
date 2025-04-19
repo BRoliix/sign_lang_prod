@@ -1,0 +1,12 @@
+tensorflow-macos
+tensorflow-metal
+opencv-python-headless
+mediapipe
+requests
+beautifulsoup4
+pandas
+numpy
+matplotlib
+selenium
+webdriver-manager
+tqdm
