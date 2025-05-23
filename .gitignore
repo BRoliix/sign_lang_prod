@@ -34,3 +34,50 @@ venv.bak/
 *.bak
 *.swp
 *.tmp
+
+
+# Node modules
+node_modules/
+
+# Build output
+dist/
+build/
+out/
+# Data folder
+data/
+.data/
+output_of_openpose/
+evaluation_results
+# Python cache
+__pycache__/
+# Logs
+logs/
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.*
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Test coverage
+coverage/
+
+# Dependency directories
+bower_components/
+jspm_packages/
+
+# Misc
+*.tgz
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
